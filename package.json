@@ -1,0 +1,33 @@
+{
+  "name": "node-s3-encryption-client",
+  "version": "0.0.1",
+  "description": "Node.js implementation of the KMS Envelope Encryption for AWS S3",
+  "main": "./index.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "mocha --recursive test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/gilt/node-s3-encryption-client"
+  },
+  "keywords": [
+    "kms",
+    "s3",
+    "envelope encryption",
+    "encryption client"
+  ],
+  "author": "Ryan Martin",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/gilt/node-s3-encryption-client/issues"
+  },
+  "dependencies": {
+    "aws-sdk": "2.x"
+  },
+  "devDependencies": {
+    "sinon": "^1.17.3"
+  }
+}
