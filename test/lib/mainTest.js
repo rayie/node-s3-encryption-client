@@ -24,7 +24,7 @@ describe('node-s3-encryption-client', function() {
     beforeEach(function() {
       sinon
         .stub(kms, 'decrypt')
-        .yields(null, {"Plaintext": "123456"});
+        .yields(null, {"Plaintext": new Buffer("123456", 'base64')});
     });
 
     afterEach(function() {
@@ -33,10 +33,10 @@ describe('node-s3-encryption-client', function() {
     });
 
     it('should decrypt content when a key is present', function() {
-      var helper = new crypt.Helper("123456");
+      var helper = new crypt.Helper("12345w==");
       sinon
         .stub(s3, 'getObject')
-        .yields(null, {"Body": helper.encrypt("foo"), "Metadata": {"x-amz-meta-x-amz-key": "encrypted-key"}});
+        .yields(null, {"Body": new Buffer(helper.encrypt("foo"), 'utf-8'), "Metadata": {"x-amz-key": "encrypted-key"}});
       s3Enc.getObject({
         Bucket: "test-bucket",
         Key: "test-key"
@@ -48,10 +48,10 @@ describe('node-s3-encryption-client', function() {
     });
 
     it('should use the cipher algorithm when present', function() {
-      var helper = new crypt.Helper("123456", {algorithm: "des-cbc"});
+      var helper = new crypt.Helper("12345w==", {algorithm: "des-cbc"});
       sinon
         .stub(s3, 'getObject')
-        .yields(null, {"Body": helper.encrypt("foo"), "Metadata": {"x-amz-meta-x-amz-key": "encrypted-key", "x-amz-meta-cipher-algorithm": "des-cbc"}});
+        .yields(null, {"Body": new Buffer(helper.encrypt("foo"), 'utf-8'), "Metadata": {"x-amz-key": "encrypted-key", "cipher-algorithm": "des-cbc"}});
       s3Enc.getObject({
         Bucket: "test-bucket",
         Key: "test-key"
@@ -63,10 +63,10 @@ describe('node-s3-encryption-client', function() {
     });
 
     it('should use the decrypted encoding when present', function() {
-      var helper = new crypt.Helper("123456", {decryptedEncoding: "binary"});
+      var helper = new crypt.Helper("12345w==", {decryptedEncoding: "binary"});
       sinon
         .stub(s3, 'getObject')
-        .yields(null, {"Body": helper.encrypt("foo"), "Metadata": {"x-amz-meta-x-amz-key": "encrypted-key", "x-amz-meta-decrypted-encoding": "binary"}});
+        .yields(null, {"Body": new Buffer(helper.encrypt("foo"), 'utf-8'), "Metadata": {"x-amz-key": "encrypted-key", "decrypted-encoding": "binary"}});
       s3Enc.getObject({
         Bucket: "test-bucket",
         Key: "test-key"
@@ -78,13 +78,13 @@ describe('node-s3-encryption-client', function() {
     });
 
     it('should pass the EncryptionContext to KMS when specified', function() {
-      var helper = new crypt.Helper("123456");
+      var helper = new crypt.Helper("12345w==");
       kms.decrypt.restore();
       var kmsstub = sinon.stub(kms, 'decrypt');
-      kmsstub.withArgs({CiphertextBlob: "encrypted-key", EncryptionContext: {"foo": "bar"}}).yields(null, {"Plaintext": "123456"});
+      kmsstub.withArgs({CiphertextBlob: new Buffer("encrypted-key", 'base64'), EncryptionContext: {"foo": "bar"}}).yields(null, {"Plaintext": new Buffer("123456", 'base64')});
       kmsstub.yields("Invalid args");
       var s3stub = sinon.stub(s3, 'getObject');
-      s3stub.withArgs({Bucket: "test-bucket", Key: "test-key"}).yields(null, {"Body": helper.encrypt("foo"), "Metadata": {"x-amz-meta-x-amz-key": "encrypted-key"}});
+      s3stub.withArgs({Bucket: "test-bucket", Key: "test-key"}).yields(null, {"Body": new Buffer(helper.encrypt("foo"), 'utf-8'), "Metadata": {"x-amz-key": "encrypted-key"}});
       s3stub.yields("Invalid args");
 
       s3Enc.getObject({
@@ -99,10 +99,10 @@ describe('node-s3-encryption-client', function() {
     });
 
     it('should remove encryption Metadata but not lose other Metadata when decrypting', function() {
-      var helper = new crypt.Helper("123456");
+      var helper = new crypt.Helper("12345w==");
       sinon
         .stub(s3, 'getObject')
-        .yields(null, {"Body": helper.encrypt("foo"), "Metadata": {"x-amz-meta-x-amz-key": "encrypted-key", "foo": "bar"}});
+        .yields(null, {"Body": new Buffer(helper.encrypt("foo"), 'utf-8'), "Metadata": {"x-amz-key": "encrypted-key", "foo": "bar"}});
       s3Enc.getObject({
         Bucket: "test-bucket",
         Key: "test-key"
@@ -116,7 +116,7 @@ describe('node-s3-encryption-client', function() {
     it('should not decrypt content when there is no key', function() {
       sinon
         .stub(s3, 'getObject')
-        .yields(null, {"Body": "foo"});
+        .yields(null, {"Body": new Buffer("foo", 'utf-8')});
       s3Enc.getObject({
         Bucket: "test-bucket",
         Key: "test-key"
@@ -146,7 +146,7 @@ describe('node-s3-encryption-client', function() {
         .yields({name: "Error", message: "KMS error"}, null);
       sinon
         .stub(s3, 'getObject')
-        .yields(null, {"Body": "invalid", "Metadata": {"x-amz-meta-x-amz-key": "encrypted-key", "foo": "bar"}});
+        .yields(null, {"Body": new Buffer("invalid", 'utf-8'), "Metadata": {"x-amz-key": "encrypted-key", "foo": "bar"}});
       s3Enc.getObject({
         Bucket: "test-bucket",
         Key: "test-key"
@@ -161,7 +161,7 @@ describe('node-s3-encryption-client', function() {
     beforeEach(function() {
       sinon
         .stub(kms, 'generateDataKey')
-        .yields(null, {"Plaintext": "123456", "CiphertextBlob": "ciphertext-blob"});
+        .yields(null, {"Plaintext": new Buffer("123456", 'base64'), "CiphertextBlob": new Buffer("ciphertextblob", "base64")});
     });
 
     afterEach(function() {
@@ -211,14 +211,14 @@ describe('node-s3-encryption-client', function() {
     });
 
     it('should encrypt if KmsParams.KeyId is given', function() {
-      var helper = new crypt.Helper("123456");
+      var helper = new crypt.Helper("12345w==");
       var s3stub = sinon.stub(s3, 'putObject');
       s3stub.withArgs({
         Bucket: "test-bucket",
         Key: "test-key",
         Body: helper.encrypt("foo"),
         Metadata: {
-          "x-amz-meta-x-amz-key": "ciphertext-blob"
+          "x-amz-key": "ciphertextbloQ=="
         }
       }).yields(null, {"ETag": "123456"});
       s3stub.yields("Invalid args");
@@ -237,15 +237,15 @@ describe('node-s3-encryption-client', function() {
     });
 
     it('should encrypt with cipher algorithm if given', function() {
-      var helper = new crypt.Helper("123456", {"algorithm": "des-cbc"});
+      var helper = new crypt.Helper("12345w==", {"algorithm": "des-cbc"});
       var s3stub = sinon.stub(s3, 'putObject');
       s3stub.withArgs({
         Bucket: "test-bucket",
         Key: "test-key",
         Body: helper.encrypt("foo"),
         Metadata: {
-          "x-amz-meta-x-amz-key": "ciphertext-blob",
-          "x-amz-meta-cipher-algorithm": "des-cbc"
+          "x-amz-key": "ciphertextbloQ==",
+          "cipher-algorithm": "des-cbc"
         }
       }).yields(null, {"ETag": "123456"});
       s3stub.yields("Invalid args");
@@ -265,15 +265,15 @@ describe('node-s3-encryption-client', function() {
     });
 
     it('should encrypt with decrypted encoding if given', function() {
-      var helper = new crypt.Helper("123456", {"decryptedEncoding": "binary"});
+      var helper = new crypt.Helper("12345w==", {"decryptedEncoding": "binary"});
       var s3stub = sinon.stub(s3, 'putObject');
       s3stub.withArgs({
         Bucket: "test-bucket",
         Key: "test-key",
         Body: helper.encrypt("foo"),
         Metadata: {
-          "x-amz-meta-x-amz-key": "ciphertext-blob",
-          "x-amz-meta-decrypted-encoding": "binary"
+          "x-amz-key": "ciphertextbloQ==",
+          "decrypted-encoding": "binary"
         }
       }).yields(null, {"ETag": "123456"});
       s3stub.yields("Invalid args");
@@ -293,20 +293,20 @@ describe('node-s3-encryption-client', function() {
     });
 
     it('should encrypt with EncondingContext if given', function() {
-      var helper = new crypt.Helper("123456");
+      var helper = new crypt.Helper("12345w==");
       var s3stub = sinon.stub(s3, 'putObject');
       s3stub.withArgs({
         Bucket: "test-bucket",
         Key: "test-key",
         Body: helper.encrypt("foo"),
         Metadata: {
-          "x-amz-meta-x-amz-key": "ciphertext-blob"
+          "x-amz-key": "ciphertextbloQ=="
         }
       }).yields(null, {"ETag": "123456"});
       s3stub.yields("Invalid args");
       kms.generateDataKey.restore();
       var kmsstub = sinon.stub(kms, 'generateDataKey');
-      kmsstub.withArgs({KeyId: "alias/key-id", EncryptionContext: {"foo": "bar"}}).yields(null, {"Plaintext": "123456", "CiphertextBlob": "ciphertext-blob"});
+      kmsstub.withArgs({KeyId: "alias/key-id", EncryptionContext: {"foo": "bar"}}).yields(null, {"Plaintext": new Buffer("123456", 'base64'), "CiphertextBlob": new Buffer("ciphertextblob", "base64")});
       kmsstub.yields("Invalid args");
 
       s3Enc.putObject({
@@ -344,7 +344,7 @@ describe('node-s3-encryption-client', function() {
       .yields({"name": "Error", "message": "S3 Error"}, null);
       kms.generateDataKey.restore();
       var kmsstub = sinon.stub(kms, 'generateDataKey');
-      kmsstub.withArgs({KeyId: "alias/key-id", EncryptionContext: {"foo": "bar"}}).yields(null, {"Plaintext": "123456", "CiphertextBlob": "ciphertext-blob"});
+      kmsstub.withArgs({KeyId: "alias/key-id", EncryptionContext: {"foo": "bar"}}).yields(null, {"Plaintext": new Buffer("123456", "base64"), "CiphertextBlob": new Buffer("ciphertextblob", "base64")});
       kmsstub.yields("Invalid args");
 
       s3Enc.putObject({

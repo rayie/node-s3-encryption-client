@@ -10,5 +10,5 @@ TMP_FILE=$(openssl rand -hex 20)
 
 eval "$(aws kms generate-data-key --profile $AWS_PROFILE --key-id $KMS_KEY_ID --number-of-bytes 256 --query "[Plaintext,CiphertextBlob]" --output text | sed -e "s/$(echo $'\t')/; CIPHER_BLOB=/" | sed -e "s/^/KMS_KEY=/")"
 openssl enc -a -$CIPHER -k $KMS_KEY -nosalt -in $INPUT_FILE -out $TMP_FILE
-aws s3api put-object --profile $AWS_PROFILE --bucket $DESTINATION_BUCKET --key $DESTINATION_KEY --metadata "{\"x-amz-meta-x-amz-key\": \"$CIPHER_BLOB\", \"x-amz-meta-cipher-algorithm\": \"$CIPHER\"}" --body $TMP_FILE
+aws s3api put-object --profile $AWS_PROFILE --bucket $DESTINATION_BUCKET --key $DESTINATION_KEY --metadata "{\"x-amz-key\": \"$CIPHER_BLOB\", \"cipher-algorithm\": \"$CIPHER\"}" --body $TMP_FILE
 rm $TMP_FILE
