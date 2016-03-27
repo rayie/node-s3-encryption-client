@@ -26,8 +26,9 @@ but with a few additional parameters, as follows.
 
 #### KmsParams
 A JSON document matching the params here: http://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/KMS.html#generateDataKey-property
-At the very least, KmaParams.KeyId must be defined in order for encryption to happen. Note that if an EncryptionContext
-is given, it must also be specified in the call to getObject.
+At the very least, KmaParams.KeyId must be defined in order for encryption to happen. Note that, per AWS documentation,
+either NumberOfBytes or KeySpec is required in addition to KeyId. Also note that if an EncryptionContext is given,
+it must also be specified in the call to getObject.
 
 #### CipherAlgorithm
 The cipher algorithm to use when encrypting the object. Find the list by looking at crypto.getCiphers(). Optional,
