@@ -1,12 +1,110 @@
-# Usage: s3-put-encrypted file-to-put.txt your-bucket your-object-name key-id cipher-algorithm aws-profile
+#!/bin/bash
+PROGRAM_NAME="${0##*/}"
 
-INPUT_FILE=$1
-DESTINATION_BUCKET=$2
-DESTINATION_KEY=$3
-KMS_KEY_ID=$4
-CIPHER=${5:-aes-256-cbc}
-AWS_PROFILE=${6:-default}
-TMP_FILE=$(openssl rand -hex 20)
+function usage
+{
+   echo "$PROGRAM_NAME -f file-name -b bucket-name -o object-key -k kms-key -c cipher-algorithm -p aws-profile"
+   echo "where: "
+   echo "       -b bucket-name        => S3 bucket to upload the file"
+   echo "       -c cipher-algorithm   => cipher algorithm to use when encrypting; defaults to aes-256-cbc"
+   echo "       -f file-name          => file to encrypt and upload to S3"
+   echo "       -k kms-key            => id of the KMS key to use when encrypting the file"
+   echo "       -o object-key         => object key of the file when uploading to S3"
+   echo "       -p profile-name       => AWS profile name; defaults to 'default'"
+   echo
+}
+
+INPUT_FILE=""
+DESTINATION_BUCKET=""
+DESTINATION_KEY=""
+KMS_KEY_ID=""
+AWS_PROFILE=""
+CIPHER=""
+TMP_FILE=$(mktemp)
+
+while getopts ":f:b:o:k:p:c:h" opt
+do
+        case $opt in
+            b) 
+                DESTINATION_BUCKET="$OPTARG"
+                ;;  
+            c) 
+                CIPHER="$OPTARG"
+                ;;
+            f)  
+                INPUT_FILE="$OPTARG"
+                ;;  
+            k) 
+                KMS_KEY_ID="$OPTARG"
+                ;;
+            o) 
+                DESTINATION_KEY="$OPTARG"
+                ;;
+            p)  
+                AWS_PROFILE="$OPTARG"
+                ;;  
+            :)  echo "ERROR ($PROGRAM_NAME): Option $OPTARG is missing an argument"
+                 exit 2
+                ;;  
+
+            \?) echo "ERROR ($PROGRAM_NAME): Option $OPTARG is an unknown option"
+                usage
+                exit 3
+                ;;
+
+            h|*)
+                usage
+                exit 1
+                ;;
+        esac
+done
+
+shift $((OPTIND - 1))
+
+if [[ "$AWS_PROFILE" == "" ]]
+then
+    AWS_PROFILE="default"
+fi
+
+if [[ "$INPUT_FILE" == "" ]]
+then
+    echo "ERROR ($PROGRAM_NAME): local file '$INPUT_FILE' cannot be empty"
+    usage
+    exit 2
+fi
+
+if [ ! -f "$INPUT_FILE" ]
+then
+    echo "ERROR ($PROGRAM_NAME): local file '$INPUT_FILE' not found"
+    usage
+    exit 4
+fi
+
+if [[ "$DESTINATION_BUCKET" == "" ]]
+then
+    echo "ERROR ($PROGRAM_NAME): S3 bucket name '$DESTINATION_BUCKET' cannot be empty"
+    usage
+    exit 2
+fi
+
+if [[ "$DESTINATION_KEY" == "" ]]
+then
+    echo "ERROR ($PROGRAM_NAME): S3 object key '$DESTINATION_KEY' cannot be empty"
+    usage
+    exit 2
+fi
+
+if [[ "$KMS_KEY_ID" == "" ]]
+then
+    echo "ERROR ($PROGRAM_NAME): KMS key id '$KMS_KEY_ID' cannot be empty"
+    usage
+    exit 2
+fi
+
+if [[ "$CIPHER" == "" ]]
+then
+    CIPHER="aes-256-cbc"
+fi
 
 eval "$(aws kms generate-data-key --profile $AWS_PROFILE --key-id $KMS_KEY_ID --number-of-bytes 256 --query "[Plaintext,CiphertextBlob]" --output text | sed -e "s/$(echo $'\t')/; CIPHER_BLOB=/" | sed -e "s/^/KMS_KEY=/")"
 openssl enc -a -$CIPHER -k $KMS_KEY -nosalt -in $INPUT_FILE -out $TMP_FILE
