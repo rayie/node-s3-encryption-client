@@ -20,7 +20,7 @@ DESTINATION_KEY=""
 KMS_KEY_ID=""
 AWS_PROFILE=""
 CIPHER=""
-TMP_FILE=$(mktemp)
+TMP_FILE=$(mktemp -t tmp)
 
 while getopts ":f:b:o:k:p:c:h" opt
 do
